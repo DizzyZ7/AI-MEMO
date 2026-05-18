@@ -1,0 +1,68 @@
+# AI Memo
+
+Voice-first memo diary built as a Next.js 15 PWA. The current repo contains a runnable MVP UI plus the production-oriented backend scaffold for Auth.js, Prisma, tRPC, QStash, R2, OpenAI, and Resend.
+
+## Stack
+
+- Next.js 15 App Router, React 19, TypeScript
+- Tailwind CSS with shadcn-style local UI primitives
+- Zustand for local MVP state
+- TanStack Query + tRPC v11 client/server plumbing
+- Auth.js v5 with Google/GitHub OAuth
+- Prisma 6 + Supabase PostgreSQL + pgvector
+- Upstash Redis/QStash, Cloudflare R2, OpenAI, Resend
+
+## Run Locally
+
+```bash
+npm install
+npx prisma generate
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+The app UI works without service credentials by using local demo data. Server routes require the relevant env vars from `.env.example`.
+
+If Prisma engine download fails through a local proxy, clear proxy variables for the command:
+
+```powershell
+$env:http_proxy=''; $env:https_proxy=''; $env:HTTP_PROXY=''; $env:HTTPS_PROXY=''; npx prisma generate
+```
+
+## Database
+
+1. Create a Supabase project.
+2. Enable pgvector: `create extension if not exists vector;`
+3. Fill `DATABASE_URL` and `DIRECT_URL`.
+4. Run:
+
+```bash
+npx prisma migrate dev
+```
+
+The initial migration creates Auth.js models, `Memo`, `Task`, enums, and an `ivfflat` pgvector index for `Memo.embedding`.
+
+## External Services
+
+- Auth: set `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`.
+- AI: set `OPENAI_API_KEY` for GPT-4o mini, Whisper, and `text-embedding-3-small`.
+- Queue: set `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`.
+- Storage: set `CF_ACCOUNT_ID`, `CF_ACCESS_KEY_ID`, `CF_SECRET_ACCESS_KEY`, `CF_R2_BUCKET`.
+- Email: set `RESEND_API_KEY`.
+
+## Implemented
+
+- Dashboard shell, memo editor, voice recorder, memo feed, tag/search filters.
+- Local demo analysis for tags, mood, and explicit tasks.
+- Tasks, insights, weekly digest preview, settings screens.
+- Auth.js route, tRPC route, QStash webhook.
+- Server services for Whisper transcription, GPT analysis, embeddings, R2 presigned uploads, weekly digest email.
+- PWA manifest and service worker.
+
+## Next Work
+
+- Wire the client mutations to tRPC instead of local Zustand demo state.
+- Add Redis monthly AI counters for Free/Pro limits.
+- Add Stripe subscription state and webhook handling.
+- Add integration tests around `processMemo` and tRPC authorization.

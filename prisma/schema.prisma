@@ -1,0 +1,119 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  plan          Plan      @default(FREE)
+  role          Role      @default(USER)
+  memos         Memo[]
+  tasks         Task[]
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Memo {
+  id         String                 @id @default(cuid())
+  userId     String
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content    String
+  audioUrl   String?
+  transcript String?
+  summary    String?
+  mood       Mood?
+  tags       String[]               @default([])
+  tasks      Task[]
+  embedding  Unsupported("vector")?
+  processed  Boolean                @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([deletedAt])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  userId    String
+  memoId    String?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memo      Memo?     @relation(fields: [memoId], references: [id], onDelete: SetNull)
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, done])
+  @@index([memoId])
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+enum Role {
+  USER
+  TEAM_ADMIN
+  ADMIN
+}
+
+enum Mood {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
