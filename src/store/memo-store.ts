@@ -8,13 +8,15 @@ type MemoState = {
   memos: Memo[];
   search: string;
   activeTag?: string;
-  addMemo: (input: { content: string; audioUrl?: string }) => void;
+  addMemo: (input: { content: string; audioUrl?: string }) => Memo;
   deleteMemo: (id: string) => void;
+  replaceMemo: (localId: string, memo: Memo) => void;
   resetDemoData: () => void;
   setSearch: (value: string) => void;
   setActiveTag: (tag?: string) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  upsertMemos: (memos: Memo[]) => void;
 };
 
 const positiveWords = ["рад", "класс", "успех", "получилось", "идея", "спокой"];
@@ -133,6 +135,12 @@ function inferDueDate(text: string) {
   return undefined;
 }
 
+function sortMemos(memos: Memo[]) {
+  return [...memos].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
 function analyzeMemo(content: string): MemoAnalysis {
   const text = content.toLowerCase();
   const moodScore =
@@ -168,44 +176,50 @@ export const useMemoStore = create<MemoState>()(
       memos: getSeedMemos(),
       search: "",
       activeTag: undefined,
-      addMemo: ({ content, audioUrl }) =>
-        set((state) => {
-          const analysis = analyzeMemo(content);
-          const createdAt = new Date().toISOString();
-          const memoId = crypto.randomUUID();
-          const tasks: MemoTask[] = analysis.tasks.map((title) => {
-            const normalizedTitle = normalizeTaskTitle(title);
-
-            return {
-              id: crypto.randomUUID(),
-              memoId,
-              title: normalizedTitle,
-              done: false,
-              dueDate: inferDueDate(normalizedTitle),
-              createdAt,
-            };
-          });
+      addMemo: ({ content, audioUrl }) => {
+        const analysis = analyzeMemo(content);
+        const createdAt = new Date().toISOString();
+        const memoId = crypto.randomUUID();
+        const tasks: MemoTask[] = analysis.tasks.map((title) => {
+          const normalizedTitle = normalizeTaskTitle(title);
 
           return {
-            memos: [
-              {
-                id: memoId,
-                content,
-                audioUrl,
-                summary: analysis.summary,
-                mood: analysis.mood,
-                tags: analysis.tags,
-                tasks,
-                processed: true,
-                createdAt,
-                updatedAt: createdAt,
-              },
-              ...state.memos,
-            ],
+            id: crypto.randomUUID(),
+            memoId,
+            title: normalizedTitle,
+            done: false,
+            dueDate: inferDueDate(normalizedTitle),
+            createdAt,
           };
-        }),
+        });
+        const memo: Memo = {
+          id: memoId,
+          content,
+          audioUrl,
+          summary: analysis.summary,
+          mood: analysis.mood,
+          tags: analysis.tags,
+          tasks,
+          processed: true,
+          createdAt,
+          updatedAt: createdAt,
+        };
+
+        set((state) => ({
+          memos: [memo, ...state.memos],
+        }));
+
+        return memo;
+      },
       deleteMemo: (id) =>
         set((state) => ({ memos: state.memos.filter((memo) => memo.id !== id) })),
+      replaceMemo: (localId, memo) =>
+        set((state) => ({
+          memos: sortMemos([
+            memo,
+            ...state.memos.filter((item) => item.id !== localId && item.id !== memo.id),
+          ]),
+        })),
       resetDemoData: () => set({ memos: getSeedMemos(), search: "", activeTag: undefined }),
       setSearch: (search) => set({ search }),
       setActiveTag: (activeTag) => set({ activeTag }),
@@ -225,6 +239,18 @@ export const useMemoStore = create<MemoState>()(
             tasks: memo.tasks.filter((task) => task.id !== id),
           })),
         })),
+      upsertMemos: (memos) =>
+        set((state) => {
+          const byId = new Map(state.memos.map((memo) => [memo.id, memo]));
+
+          for (const memo of memos) {
+            byId.set(memo.id, memo);
+          }
+
+          return {
+            memos: sortMemos(Array.from(byId.values())),
+          };
+        }),
     }),
     {
       name: "ai-memo-local-state",

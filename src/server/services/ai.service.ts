@@ -7,6 +7,40 @@ import { transcribeAudioUrl } from "@/server/services/voice.service";
 
 const allowedMoods = new Set(["POSITIVE", "NEUTRAL", "NEGATIVE"]);
 
+function normalizeTaskTitle(value: string) {
+  const title = value.replace(/\s+/g, " ").replace(/[.,;:!?]+$/g, "").trim();
+  return title.charAt(0).toUpperCase() + title.slice(1);
+}
+
+function taskKey(value: string) {
+  return normalizeTaskTitle(value).toLowerCase();
+}
+
+function dateAtHour(offsetDays: number, hour = 18) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  date.setHours(hour, 0, 0, 0);
+  return date;
+}
+
+function inferDueDate(text: string) {
+  const value = text.toLowerCase();
+
+  if (value.includes("послезавтра")) {
+    return dateAtHour(2);
+  }
+
+  if (value.includes("завтра")) {
+    return dateAtHour(1);
+  }
+
+  if (value.includes("сегодня")) {
+    return dateAtHour(0);
+  }
+
+  return undefined;
+}
+
 function fallbackAnalysis(content: string): MemoAnalysis {
   return {
     summary: content.length > 180 ? `${content.slice(0, 177).trim()}...` : content,
@@ -63,7 +97,11 @@ export async function analyzeMemoContent(content: string): Promise<MemoAnalysis>
     return fallbackAnalysis(content);
   }
 
-  return normalizeAnalysis(JSON.parse(raw), content);
+  try {
+    return normalizeAnalysis(JSON.parse(raw), content);
+  } catch {
+    return fallbackAnalysis(content);
+  }
 }
 
 export async function processMemo(memoId: string) {
@@ -89,6 +127,19 @@ export async function processMemo(memoId: string) {
 
   const result = await analyzeMemoContent(content);
   const embedding = await createEmbedding(content);
+  const existingTasks = await db.task.findMany({
+    where: {
+      memoId,
+      userId: memo.userId,
+    },
+    select: {
+      title: true,
+    },
+  });
+  const existingTaskKeys = new Set(existingTasks.map((task) => taskKey(task.title)));
+  const newTasks = result.tasks
+    .map((title) => normalizeTaskTitle(title))
+    .filter((title) => title.length > 0 && !existingTaskKeys.has(taskKey(title)));
 
   await db.$transaction([
     db.memo.update({
@@ -100,12 +151,13 @@ export async function processMemo(memoId: string) {
         processed: true,
       },
     }),
-    ...result.tasks.map((title) =>
+    ...newTasks.map((title) =>
       db.task.create({
         data: {
           userId: memo.userId,
           memoId,
           title,
+          dueDate: inferDueDate(title),
         },
       }),
     ),

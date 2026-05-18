@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   BarChart3,
   CheckSquare,
+  Cloud,
+  CloudOff,
   FileText,
   LogIn,
+  LogOut,
+  Loader2,
   Menu,
   Search,
   Settings,
@@ -18,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useSearch } from "@/hooks/useSearch";
+import { toClientMemo } from "@/lib/memo-adapters";
+import { trpc } from "@/lib/trpc/client";
+import { useMemoStore } from "@/store/memo-store";
 
 const navItems = [
   { href: "/", label: "Мемо", icon: FileText },
@@ -74,6 +82,77 @@ function PreviewNote() {
         Локальная демо-лента работает сразу. Подключи env, чтобы включить OAuth, БД,
         Whisper и GPT.
       </p>
+    </div>
+  );
+}
+
+function CloudStatus() {
+  const { data: session, status } = useSession();
+  const upsertMemos = useMemoStore((state) => state.upsertMemos);
+  const remoteMemos = trpc.memo.list.useQuery(
+    { limit: 50 },
+    {
+      enabled: status === "authenticated",
+      retry: false,
+      staleTime: 30_000,
+    },
+  );
+
+  useEffect(() => {
+    if (remoteMemos.data?.items.length) {
+      upsertMemos(remoteMemos.data.items.map(toClientMemo));
+    }
+  }, [remoteMemos.data, upsertMemos]);
+
+  if (status === "loading") {
+    return (
+      <div className="hidden h-10 items-center gap-2 rounded-md border px-3 text-sm text-muted-foreground sm:flex">
+        <Loader2 className="size-4 animate-spin" />
+        Сессия
+      </div>
+    );
+  }
+
+  if (status !== "authenticated") {
+    return (
+      <Button asChild variant="outline" className="hidden sm:inline-flex">
+        <Link href="/sign-in">
+          <LogIn />
+          Войти
+        </Link>
+      </Button>
+    );
+  }
+
+  const cloudReady = !remoteMemos.error;
+
+  return (
+    <div className="hidden items-center gap-2 sm:flex">
+      <div
+        className={cn(
+          "flex h-10 max-w-[260px] items-center gap-2 rounded-md border px-3 text-sm",
+          cloudReady ? "bg-white text-foreground" : "bg-secondary text-secondary-foreground",
+        )}
+        title={remoteMemos.error?.message}
+      >
+        {remoteMemos.isLoading ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : cloudReady ? (
+          <Cloud className="size-4 text-primary" />
+        ) : (
+          <CloudOff className="size-4" />
+        )}
+        <span className="truncate">{session.user?.email ?? session.user?.name ?? "Аккаунт"}</span>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Выйти"
+        onClick={() => void signOut({ callbackUrl: "/" })}
+      >
+        <LogOut />
+      </Button>
     </div>
   );
 }
@@ -149,12 +228,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 className="pl-9"
               />
             </div>
-            <Button asChild variant="outline" className="hidden sm:inline-flex">
-              <Link href="/sign-in">
-                <LogIn />
-                Войти
-              </Link>
-            </Button>
+            <CloudStatus />
           </div>
         </header>
         <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">{children}</main>

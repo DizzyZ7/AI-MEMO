@@ -3,6 +3,7 @@
 import { FilterX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MemoCard } from "@/components/memo/MemoCard";
+import { SemanticMatches } from "@/components/memo/SemanticMatches";
 import { useMemos } from "@/hooks/useMemo";
 import { useSearch } from "@/hooks/useSearch";
 
@@ -24,6 +25,8 @@ export function MemoList() {
           </Button>
         ) : null}
       </div>
+
+      <SemanticMatches />
 
       {memos.length > 0 ? (
         <div className="grid gap-4">

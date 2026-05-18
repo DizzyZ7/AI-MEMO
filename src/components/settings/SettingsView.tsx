@@ -1,9 +1,11 @@
 "use client";
 
-import { DatabaseBackup, GitBranch, Mail, RotateCcw, Shield, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, DatabaseBackup, GitBranch, Mail, RotateCcw, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { requestTaskReminderPermission } from "@/hooks/useTaskReminders";
 import { useMemoStore } from "@/store/memo-store";
 
 const envItems = [
@@ -17,7 +19,24 @@ const envItems = [
 export function SettingsView() {
   const memos = useMemoStore((state) => state.memos);
   const resetDemoData = useMemoStore((state) => state.resetDemoData);
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | "unsupported"
+  >("default");
   const taskCount = memos.reduce((count, memo) => count + memo.tasks.length, 0);
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission);
+      return;
+    }
+
+    setNotificationPermission("unsupported");
+  }, []);
+
+  async function handleEnableReminders() {
+    const permission = await requestTaskReminderPermission();
+    setNotificationPermission(permission);
+  }
 
   return (
     <div className="space-y-6">
@@ -122,6 +141,37 @@ export function SettingsView() {
             <p className="text-xs text-muted-foreground">QStash cron + Resend email</p>
           </div>
           <Switch checked onCheckedChange={() => undefined} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Напоминания</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Bell className="size-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium">
+                {notificationPermission === "granted"
+                  ? "Браузерные напоминания включены"
+                  : "Браузерные напоминания выключены"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Сработают для задач с датой из формулировок «сегодня», «завтра» и
+                «послезавтра».
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={notificationPermission === "unsupported" || notificationPermission === "granted"}
+            onClick={handleEnableReminders}
+          >
+            <Bell />
+            Включить
+          </Button>
         </CardContent>
       </Card>
     </div>

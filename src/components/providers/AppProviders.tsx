@@ -2,8 +2,10 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
+import { SessionProvider } from "next-auth/react";
 import { useState, type ReactNode } from "react";
 import superjson from "superjson";
+import { useTaskReminders } from "@/hooks/useTaskReminders";
 import { trpc } from "@/lib/trpc/client";
 
 function getBaseUrl() {
@@ -12,6 +14,12 @@ function getBaseUrl() {
   }
 
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
+
+function ClientEffects() {
+  useTaskReminders();
+
+  return null;
 }
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -28,8 +36,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    </trpc.Provider>
+    <SessionProvider>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <ClientEffects />
+          {children}
+        </QueryClientProvider>
+      </trpc.Provider>
+    </SessionProvider>
   );
 }

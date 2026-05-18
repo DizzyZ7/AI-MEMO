@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { enqueueMemoProcessing } from "@/lib/queue";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
+import { processMemo } from "@/server/services/ai.service";
 import { searchSimilarMemos } from "@/server/services/embedding.service";
 
 export const memoRouter = router({
@@ -21,9 +22,22 @@ export const memoRouter = router({
         },
       });
 
-      await enqueueMemoProcessing(memo.id);
+      const queueResult = await enqueueMemoProcessing(memo.id);
 
-      return memo;
+      if (!queueResult.queued) {
+        await processMemo(memo.id);
+      }
+
+      const processedMemo = await ctx.db.memo.findUnique({
+        where: { id: memo.id },
+        include: {
+          tasks: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      });
+
+      return processedMemo ?? { ...memo, tasks: [] };
     }),
 
   list: protectedProcedure

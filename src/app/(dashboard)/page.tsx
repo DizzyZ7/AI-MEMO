@@ -1,6 +1,7 @@
 import { MemoEditor } from "@/components/memo/MemoEditor";
 import { MemoList } from "@/components/memo/MemoList";
 import { DashboardOverview } from "@/components/memo/DashboardOverview";
+import { DashboardOnboarding } from "@/components/memo/DashboardOnboarding";
 
 export default function DashboardPage() {
   return (
@@ -12,6 +13,7 @@ export default function DashboardPage() {
             Быстрые мысли, задачи, идеи и события в одной живой ленте.
           </p>
         </div>
+        <DashboardOnboarding />
         <MemoEditor />
         <MemoList />
       </div>
