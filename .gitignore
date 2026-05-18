@@ -8,6 +8,7 @@ out/
 # production
 dist/
 build/
+tsconfig.tsbuildinfo
 
 # local env files
 .env

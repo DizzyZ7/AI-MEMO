@@ -15,6 +15,7 @@ type MemoState = {
   setSearch: (value: string) => void;
   setActiveTag: (tag?: string) => void;
   toggleTask: (id: string) => void;
+  updateTask: (id: string, input: Partial<Pick<MemoTask, "title" | "dueDate" | "done">>) => void;
   deleteTask: (id: string) => void;
   upsertMemos: (memos: Memo[]) => void;
 };
@@ -229,6 +230,21 @@ export const useMemoStore = create<MemoState>()(
             ...memo,
             tasks: memo.tasks.map((task) =>
               task.id === id ? { ...task, done: !task.done } : task,
+            ),
+          })),
+        })),
+      updateTask: (id, input) =>
+        set((state) => ({
+          memos: state.memos.map((memo) => ({
+            ...memo,
+            tasks: memo.tasks.map((task) =>
+              task.id === id
+                ? {
+                    ...task,
+                    ...input,
+                    title: input.title?.trim() || task.title,
+                  }
+                : task,
             ),
           })),
         })),

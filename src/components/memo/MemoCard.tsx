@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { CalendarClock, Check, CheckSquare, Clock, Copy, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { trpc } from "@/lib/trpc/client";
 import { formatDateTime } from "@/lib/utils";
 import type { Memo, Mood } from "@/types/memo";
 import { useMemoStore } from "@/store/memo-store";
@@ -23,6 +25,12 @@ const moodVariants: Record<Mood, "positive" | "neutral" | "negative"> = {
 
 export function MemoCard({ memo }: { memo: Memo }) {
   const [copied, setCopied] = useState(false);
+  const { status } = useSession();
+  const utils = trpc.useUtils();
+  const remoteDelete = trpc.memo.delete.useMutation({
+    onSuccess: () => void utils.memo.list.invalidate(),
+    onError: () => undefined,
+  });
   const deleteMemo = useMemoStore((state) => state.deleteMemo);
   const setActiveTag = useMemoStore((state) => state.setActiveTag);
 
@@ -46,6 +54,14 @@ export function MemoCard({ memo }: { memo: Memo }) {
     window.setTimeout(() => setCopied(false), 1400);
   }
 
+  function handleDelete() {
+    deleteMemo(memo.id);
+
+    if (status === "authenticated") {
+      remoteDelete.mutate({ id: memo.id });
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="space-y-3">
@@ -63,7 +79,7 @@ export function MemoCard({ memo }: { memo: Memo }) {
             <Button size="icon" variant="ghost" aria-label="Скопировать" onClick={handleCopy}>
               {copied ? <Check /> : <Copy />}
             </Button>
-            <Button size="icon" variant="ghost" aria-label="Удалить" onClick={() => deleteMemo(memo.id)}>
+            <Button size="icon" variant="ghost" aria-label="Удалить" onClick={handleDelete}>
               <Trash2 />
             </Button>
           </div>

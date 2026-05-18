@@ -1,6 +1,8 @@
 # AI Memo
 
-Voice-first memo diary built as a Next.js 15 PWA. The current repo contains a runnable MVP UI plus the production-oriented backend scaffold for Auth.js, Prisma, tRPC, QStash, R2, OpenAI, and Resend.
+Voice-first memo diary built as a Next.js 15 PWA. AI Memo turns quick thoughts into searchable notes, extracted tasks, mood signals, repeated themes, and weekly patterns.
+
+The app works immediately in local demo mode and progressively upgrades to a cloud-backed product when Auth.js, Supabase, OpenAI, QStash, R2, and Resend credentials are configured.
 
 ## Stack
 
@@ -23,6 +25,12 @@ npm run dev
 Open `http://localhost:3000`.
 
 The app UI works without service credentials by using local demo data. Server routes require the relevant env vars from `.env.example`.
+
+Use the full validation command before opening a PR:
+
+```bash
+npm run validate
+```
 
 If Prisma engine download fails through a local proxy, clear proxy variables for the command:
 
@@ -55,14 +63,19 @@ The initial migration creates Auth.js models, `Memo`, `Task`, enums, and an `ivf
 
 - Dashboard shell, memo editor, voice recorder, memo feed, tag/search filters.
 - Local demo analysis for tags, mood, and explicit tasks.
+- Persistent local state with demo reset, audio playback, memo copy, and mobile navigation.
+- Task filters, inline task editing, inferred due dates, browser reminders, and cloud sync for task actions.
+- Cloud-aware memo creation, cloud status, onboarding, semantic search, and lexical fallback search.
 - Tasks, insights, weekly digest preview, settings screens.
 - Auth.js route, tRPC route, QStash webhook.
 - Server services for Whisper transcription, GPT analysis, embeddings, R2 presigned uploads, weekly digest email.
+- Synchronous memo processing fallback when QStash is not configured.
 - PWA manifest and service worker.
+- GitHub Actions CI for lint, typecheck, Prisma Client generation, and production build.
 
 ## Next Work
 
-- Wire the client mutations to tRPC instead of local Zustand demo state.
 - Add Redis monthly AI counters for Free/Pro limits.
 - Add Stripe subscription state and webhook handling.
+- Add import/export for local data and account migration from local demo state.
 - Add integration tests around `processMemo` and tRPC authorization.
