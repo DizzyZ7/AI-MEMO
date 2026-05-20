@@ -1,7 +1,9 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "@/server/trpc/trpc";
 import { processMemo } from "@/server/services/ai.service";
 import { createUploadUrl } from "@/server/services/storage.service";
+import { getMonthlyAiUsage } from "@/server/services/usage.service";
 
 export const aiRouter = router({
   getUploadUrl: protectedProcedure
@@ -19,7 +21,20 @@ export const aiRouter = router({
       });
     }),
 
-  process: protectedProcedure.input(z.object({ memoId: z.string() })).mutation(({ input }) => {
-    return processMemo(input.memoId);
+  usage: protectedProcedure.query(({ ctx }) => {
+    return getMonthlyAiUsage({
+      userId: ctx.userId,
+      plan: ctx.session?.user.plan,
+    });
+  }),
+
+  process: protectedProcedure.input(z.object({ memoId: z.string() })).mutation(async ({ ctx, input }) => {
+    const result = await processMemo(input.memoId, { userId: ctx.userId });
+
+    if (!result) {
+      throw new TRPCError({ code: "NOT_FOUND" });
+    }
+
+    return result;
   }),
 });

@@ -206,7 +206,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="lg:pl-72">
+      <div className="min-w-0 max-w-[100vw] overflow-x-hidden lg:max-w-none lg:pl-72">
         <header className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
             <Button
@@ -231,7 +231,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <CloudStatus />
           </div>
         </header>
-        <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">{children}</main>
+        <main className="mx-auto box-border w-full max-w-[100vw] overflow-x-hidden px-4 py-6 sm:px-6 lg:max-w-7xl lg:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

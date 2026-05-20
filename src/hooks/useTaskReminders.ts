@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMemoStore } from "@/store/memo-store";
 
 const reminderPrefix = "ai-memo-reminder:";
@@ -19,13 +19,16 @@ export async function requestTaskReminderPermission() {
 }
 
 export function useTaskReminders() {
-  const tasks = useMemoStore((state) =>
-    state.memos.flatMap((memo) =>
-      memo.tasks.map((task) => ({
-        ...task,
-        memoContent: memo.content,
-      })),
-    ),
+  const memos = useMemoStore((state) => state.memos);
+  const tasks = useMemo(
+    () =>
+      memos.flatMap((memo) =>
+        memo.tasks.map((task) => ({
+          ...task,
+          memoContent: memo.content,
+        })),
+      ),
+    [memos],
   );
 
   useEffect(() => {

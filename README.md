@@ -64,18 +64,19 @@ The initial migration creates Auth.js models, `Memo`, `Task`, enums, and an `ivf
 - Dashboard shell, memo editor, voice recorder, memo feed, tag/search filters.
 - Local demo analysis for tags, mood, and explicit tasks.
 - Persistent local state with demo reset, audio playback, memo copy, and mobile navigation.
+- Local JSON export/import for browser demo data.
 - Task filters, inline task editing, inferred due dates, browser reminders, and cloud sync for task actions.
 - Cloud-aware memo creation, cloud status, onboarding, semantic search, and lexical fallback search.
 - Tasks, insights, weekly digest preview, settings screens.
 - Auth.js route, tRPC route, QStash webhook.
 - Server services for Whisper transcription, GPT analysis, embeddings, R2 presigned uploads, weekly digest email.
+- Redis-backed monthly AI usage counters with Free/Pro limits.
 - Synchronous memo processing fallback when QStash is not configured.
 - PWA manifest and service worker.
 - GitHub Actions CI for lint, typecheck, Prisma Client generation, and production build.
 
 ## Next Work
 
-- Add Redis monthly AI counters for Free/Pro limits.
 - Add Stripe subscription state and webhook handling.
-- Add import/export for local data and account migration from local demo state.
+- Add account migration from local demo state.
 - Add integration tests around `processMemo` and tRPC authorization.

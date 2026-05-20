@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { openai } from "@/lib/openai";
 import type { MemoAnalysis } from "@/types/memo";
 import { createEmbedding, updateMemoEmbedding } from "@/server/services/embedding.service";
+import { reserveAiMemoProcessing } from "@/server/services/usage.service";
 import { transcribeAudioUrl } from "@/server/services/voice.service";
 
 const allowedMoods = new Set(["POSITIVE", "NEUTRAL", "NEGATIVE"]);
@@ -104,13 +105,49 @@ export async function analyzeMemoContent(content: string): Promise<MemoAnalysis>
   }
 }
 
-export async function processMemo(memoId: string) {
+export async function processMemo(memoId: string, options: { userId?: string } = {}) {
   const memo = await db.memo.findUnique({
     where: { id: memoId },
+    include: {
+      user: {
+        select: {
+          plan: true,
+        },
+      },
+    },
   });
 
-  if (!memo || memo.deletedAt) {
+  if (!memo || memo.deletedAt || (options.userId && memo.userId !== options.userId)) {
     return null;
+  }
+
+  if (openai) {
+    const usageReservation = await reserveAiMemoProcessing({
+      userId: memo.userId,
+      memoId,
+      plan: memo.user.plan,
+    });
+
+    if (!usageReservation.allowed) {
+      const updatedMemo = await db.memo.update({
+        where: { id: memoId },
+        data: {
+          summary:
+            "Мемо сохранено без AI-обработки: месячный лимит тарифа исчерпан.",
+          mood: "NEUTRAL",
+          tags: ["лимит"],
+          processed: true,
+        },
+      });
+
+      return {
+        memoId,
+        skipped: true,
+        reason: "AI_USAGE_LIMIT_EXCEEDED",
+        usage: usageReservation.usage,
+        memo: updatedMemo,
+      };
+    }
   }
 
   let content = memo.content;

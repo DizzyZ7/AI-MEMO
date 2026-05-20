@@ -10,6 +10,7 @@ type MemoState = {
   activeTag?: string;
   addMemo: (input: { content: string; audioUrl?: string }) => Memo;
   deleteMemo: (id: string) => void;
+  importLocalData: (input: { memos: Memo[]; search?: string; activeTag?: string }) => void;
   replaceMemo: (localId: string, memo: Memo) => void;
   resetDemoData: () => void;
   setSearch: (value: string) => void;
@@ -214,6 +215,12 @@ export const useMemoStore = create<MemoState>()(
       },
       deleteMemo: (id) =>
         set((state) => ({ memos: state.memos.filter((memo) => memo.id !== id) })),
+      importLocalData: ({ memos, search = "", activeTag }) =>
+        set({
+          memos: sortMemos(memos),
+          search,
+          activeTag,
+        }),
       replaceMemo: (localId, memo) =>
         set((state) => ({
           memos: sortMemos([
